@@ -8,16 +8,23 @@ end
 module C = Spec
 
 module R = struct
+  open Irmin.Type
+
   let fixed_int i =
     let buf = Bytes.create 8 in
-    Irmin.Type.(unstage (encode_bin int64)) (Int64.of_int i) (fun s ->
+    unstage (encode_bin int64) (Int64.of_int i) (fun s ->
         Bytes.blit_string s 0 buf 0 8);
     Bytes.unsafe_to_string buf
 
+  let leb_int i =
+    let buf = Buffer.create 8 in
+    unstage (encode_bin int) i (Buffer.add_string buf);
+    Buffer.contents buf
+
   let contents b =
-    let buf = Buffer.create 0 in
-    Irmin.Type.(unstage (pre_hash Irmin_tezos.Encoding.Contents.t)) b (fun s ->
-        Buffer.add_string buf s);
+    let buf = Buffer.create (8 + Bytes.length b) in
+    (unstage (pre_hash Irmin_tezos.Encoding.Contents.t))
+      b (Buffer.add_string buf);
     Buffer.contents buf
 end
 
@@ -34,7 +41,10 @@ let () =
   declare "contents" spec R.contents C.contents;
 
   let spec = int_within (Gen.int (1 lsl 20)) ^> string in
-  declare "fixed int" spec R.fixed_int C.fixed_int
+  declare "fixed int" spec R.fixed_int C.fixed_int;
+
+  let spec = int_within (Gen.int (1 lsl 20)) ^> string in
+  declare "LEB128 int" spec R.leb_int C.leb_int
 
 let () =
   let fuel = 10 in
