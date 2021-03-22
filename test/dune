@@ -1,4 +1,4 @@
 (executable
- (name main)
+ (name main2)
  (public_name irmin-hash-fuzz)
  (libraries pprint monolith irmin_tezos))
